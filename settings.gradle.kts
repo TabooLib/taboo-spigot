@@ -1,3 +1,5 @@
+import java.util.Locale
+
 pluginManagement {
     repositories {
         gradlePluginPortal()
@@ -5,6 +7,10 @@ pluginManagement {
     }
 }
 
-rootProject.name = "forktest"
+rootProject.name = "TabooSpigot"
 
-include("forktest-api", "forktest-server")
+for (name in listOf("TabooSpigot-API", "TabooSpigot-Server")) {
+    val projName = name.toLowerCase(Locale.ENGLISH)
+    include(projName)
+    findProject(":$projName")!!.projectDir = file(name)
+}

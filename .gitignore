@@ -46,7 +46,7 @@ out/
 # other stuff
 run/
 
-forktest-server
-forktest-api
+TabooSpigot-API/
+TabooSpigot-Server/
 
 !gradle/wrapper/gradle-wrapper.jar
