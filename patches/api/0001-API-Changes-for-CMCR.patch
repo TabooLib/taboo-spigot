@@ -1,0 +1,139 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Kylepoops <62238380+Kylepoops@users.noreply.github.com>
+Date: Thu, 23 Jun 2022 19:04:54 +0800
+Subject: [PATCH] API Changes for CMCR
+
+
+diff --git a/src/main/java/org/bukkit/Server.java b/src/main/java/org/bukkit/Server.java
+index e756edf56995f4552387c2e1082307eb3dd48bb3..ab7bd89803427a8d00dd164746c7c82fb1b01ce1 100644
+--- a/src/main/java/org/bukkit/Server.java
++++ b/src/main/java/org/bukkit/Server.java
+@@ -1922,6 +1922,14 @@ public interface Server extends PluginMessageRecipient, net.kyori.adventure.audi
+         }
+         // Paper end
+ 
++        // TabooSpigot start
++        @NotNull
++        public org.bukkit.configuration.file.YamlConfiguration getTabooSpigotConfig()
++        {
++            throw new UnsupportedOperationException("Not supported yet.");
++        }
++        // TabooSpigot end
++
+         /**
+          * Sends the component to the player
+          *
+diff --git a/src/main/java/org/bukkit/plugin/PluginManager.java b/src/main/java/org/bukkit/plugin/PluginManager.java
+index 0d1b20f2b5580ea5505ccc2f003925dbcee67199..aedc1d255613323edb87893653c04b2bf3de73e2 100644
+--- a/src/main/java/org/bukkit/plugin/PluginManager.java
++++ b/src/main/java/org/bukkit/plugin/PluginManager.java
+@@ -16,6 +16,8 @@ import org.jetbrains.annotations.Nullable;
+  */
+ public interface PluginManager {
+ 
++    public void registerMavenCentralRepository(@NotNull String url);
++
+     /**
+      * Registers the specified plugin loader
+      *
+diff --git a/src/main/java/org/bukkit/plugin/SimplePluginManager.java b/src/main/java/org/bukkit/plugin/SimplePluginManager.java
+index ed07f5820281b139739f673fa4e25171de81b894..d07d0c4746c54856983e9cd43dd6c6b8a83c167c 100644
+--- a/src/main/java/org/bukkit/plugin/SimplePluginManager.java
++++ b/src/main/java/org/bukkit/plugin/SimplePluginManager.java
+@@ -55,6 +55,7 @@ public final class SimplePluginManager implements PluginManager {
+     private final Map<String, Map<Permissible, Boolean>> permSubs = new HashMap<String, Map<Permissible, Boolean>>();
+     private final Map<Boolean, Map<Permissible, Boolean>> defSubs = new HashMap<Boolean, Map<Permissible, Boolean>>();
+     private boolean useTimings = false;
++    private String mavenCentralRepository;
+ 
+     public SimplePluginManager(@NotNull Server instance, @NotNull SimpleCommandMap commandMap) {
+         server = instance;
+@@ -64,6 +65,14 @@ public final class SimplePluginManager implements PluginManager {
+         defaultPerms.put(false, new LinkedHashSet<Permission>());
+     }
+ 
++    @Override
++    public void registerMavenCentralRepository(@NotNull String repository) {
++        Preconditions.checkNotNull(repository, "repository");
++        mavenCentralRepository = repository;
++    }
++
++
++
+     /**
+      * Registers the specified plugin loader
+      *
+@@ -79,8 +88,8 @@ public final class SimplePluginManager implements PluginManager {
+             Constructor<? extends PluginLoader> constructor;
+ 
+             try {
+-                constructor = loader.getConstructor(Server.class);
+-                instance = constructor.newInstance(server);
++                constructor = loader.getConstructor(Server.class, String.class);
++                instance = constructor.newInstance(server, mavenCentralRepository);
+             } catch (NoSuchMethodException ex) {
+                 String className = loader.getName();
+ 
+diff --git a/src/main/java/org/bukkit/plugin/java/JavaPluginLoader.java b/src/main/java/org/bukkit/plugin/java/JavaPluginLoader.java
+index 8ff78fad47f6086aa289e32590f4fbec24b3d500..e1b5fe5b5a71c845f4f1dcd42ca066af23880a45 100644
+--- a/src/main/java/org/bukkit/plugin/java/JavaPluginLoader.java
++++ b/src/main/java/org/bukkit/plugin/java/JavaPluginLoader.java
+@@ -64,13 +64,13 @@ public final class JavaPluginLoader implements PluginLoader {
+      * @param instance the server instance
+      */
+     @Deprecated
+-    public JavaPluginLoader(@NotNull Server instance) {
++    public JavaPluginLoader(@NotNull Server instance, @NotNull String mavenCentralRepository) {
+         Preconditions.checkArgument(instance != null, "Server cannot be null");
+         server = instance;
+ 
+         LibraryLoader libraryLoader = null;
+         try {
+-            libraryLoader = new LibraryLoader(server.getLogger());
++            libraryLoader = new LibraryLoader(server.getLogger(), mavenCentralRepository);
+         } catch (NoClassDefFoundError ex) {
+             // Provided depends were not added back
+             server.getLogger().warning("Could not initialize LibraryLoader (missing dependencies?)");
+diff --git a/src/main/java/org/bukkit/plugin/java/LibraryLoader.java b/src/main/java/org/bukkit/plugin/java/LibraryLoader.java
+index 6d634b0ea813ccb19f1562a7d0e5a59cea4eab21..73cea8f8646515573eca3f5c52d3f417cbb40825 100644
+--- a/src/main/java/org/bukkit/plugin/java/LibraryLoader.java
++++ b/src/main/java/org/bukkit/plugin/java/LibraryLoader.java
+@@ -11,6 +11,7 @@ import java.util.List;
+ import java.util.logging.Level;
+ import java.util.logging.Logger;
+ import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
++import org.bukkit.Server;
+ import org.bukkit.plugin.PluginDescriptionFile;
+ import org.eclipse.aether.DefaultRepositorySystemSession;
+ import org.eclipse.aether.RepositorySystem;
+@@ -44,7 +45,7 @@ class LibraryLoader
+     private final DefaultRepositorySystemSession session;
+     private final List<RemoteRepository> repositories;
+ 
+-    public LibraryLoader(@NotNull Logger logger)
++    public LibraryLoader(@NotNull Logger logger, @NotNull String mavenCentralRepository)
+     {
+         this.logger = logger;
+ 
+@@ -67,7 +68,7 @@ class LibraryLoader
+         } );
+         session.setReadOnly();
+ 
+-        this.repositories = repository.newResolutionRepositories( session, Arrays.asList( new RemoteRepository.Builder( "central", "default", "https://repo.maven.apache.org/maven2" ).build() ) );
++        this.repositories = repository.newResolutionRepositories( session, Arrays.asList( new RemoteRepository.Builder( "central", "default", mavenCentralRepository ).build() ) );
+     }
+ 
+     @Nullable
+diff --git a/src/test/java/org/bukkit/event/SyntheticEventTest.java b/src/test/java/org/bukkit/event/SyntheticEventTest.java
+index d402cb59f508205ebe9ee450594826b04cecb90b..4b4d7931c4ca6aef2dd242b0649a3e93d22cd157 100644
+--- a/src/test/java/org/bukkit/event/SyntheticEventTest.java
++++ b/src/test/java/org/bukkit/event/SyntheticEventTest.java
+@@ -12,7 +12,7 @@ public class SyntheticEventTest {
+     @SuppressWarnings("deprecation")
+     @Test
+     public void test() {
+-        final JavaPluginLoader loader = new JavaPluginLoader(TestServer.getInstance());
++        final JavaPluginLoader loader = new JavaPluginLoader(TestServer.getInstance(), "https://repo.maven.apache.org/maven2");
+         TestPlugin plugin = new TestPlugin(getClass().getName()) {
+             @Override
+             public PluginLoader getPluginLoader() {

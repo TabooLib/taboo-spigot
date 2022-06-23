@@ -1,0 +1,190 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Kylepoops <62238380+Kylepoops@users.noreply.github.com>
+Date: Thu, 23 Jun 2022 19:02:40 +0800
+Subject: [PATCH] TabooSpigot Config
+
+
+diff --git a/src/main/java/co/aikar/timings/TimingsExport.java b/src/main/java/co/aikar/timings/TimingsExport.java
+index 06bff37e4c1fddd3be6343049a66787c63fb420c..0f838c491f0d182dbac012c1d15723ab7b28aa9d 100644
+--- a/src/main/java/co/aikar/timings/TimingsExport.java
++++ b/src/main/java/co/aikar/timings/TimingsExport.java
+@@ -241,7 +241,8 @@ public class TimingsExport extends Thread {
+         parent.put("config", createObject(
+             pair("spigot", mapAsJSON(Bukkit.spigot().getSpigotConfig(), null)),
+             pair("bukkit", mapAsJSON(Bukkit.spigot().getBukkitConfig(), null)),
+-            pair("paper", mapAsJSON(Bukkit.spigot().getPaperConfig(), null))
++            pair("paper", mapAsJSON(Bukkit.spigot().getPaperConfig(), null)),
++            pair("taboospigot", mapAsJSON(Bukkit.spigot().getTabooSpigotConfig(), null))
+         ));
+ 
+         new TimingsExport(listeners, parent, history).start();
+diff --git a/src/main/java/ink/ptms/taboospigot/config/TabooSpigotConfig.java b/src/main/java/ink/ptms/taboospigot/config/TabooSpigotConfig.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..cd7747d2bef92fb8a8c1adc0570931017600d1a3
+--- /dev/null
++++ b/src/main/java/ink/ptms/taboospigot/config/TabooSpigotConfig.java
+@@ -0,0 +1,72 @@
++package ink.ptms.taboospigot.config;
++
++import com.google.common.base.Throwables;
++import org.bukkit.Bukkit;
++import org.bukkit.configuration.InvalidConfigurationException;
++import org.bukkit.configuration.file.YamlConfiguration;
++
++import java.io.File;
++import java.io.IOException;
++import java.lang.reflect.InvocationTargetException;
++import java.lang.reflect.Method;
++import java.lang.reflect.Modifier;
++import java.util.logging.Level;
++
++public class TabooSpigotConfig {
++    public static File file;
++    public static YamlConfiguration config = new YamlConfiguration();
++
++    private static boolean isLoaded = false;
++
++    public static void init(File configFile) throws IOException {
++        if (isLoaded) return;
++        file = configFile;
++
++        if (!file.exists()) {
++            file.createNewFile();
++        }
++
++        try {
++            config.load(file);
++        } catch (InvalidConfigurationException e) {
++            Bukkit.getLogger().log(Level.SEVERE, "[TabooSpigot] Failed to load config file.", e);
++        }
++        config.options().copyDefaults(true);
++
++        loadConfig();
++    }
++
++    static void loadConfig() {
++        if(isLoaded) return;
++        for (Method method : TabooSpigotConfig.class.getDeclaredMethods()) {
++            if (Modifier.isPrivate(method.getModifiers()) && method.getName().startsWith("read")) {
++                if (method.getParameterTypes().length == 0 && method.getReturnType() == Void.TYPE) {
++                    try {
++                        method.setAccessible(true);
++                        method.invoke(null);
++                    } catch (Exception ex) {
++                        Bukkit.getLogger().log(Level.SEVERE, "Failed to read TabooSpigotConfig", ex);
++                    }
++                }
++            }
++        }
++
++        try {
++            config.save(file);
++        } catch (IOException ex) {
++            Bukkit.getLogger().log(Level.SEVERE, "Failed to save TabooSpigotConfig", ex);
++        }
++        isLoaded = true;
++    }
++
++    private static String getString(String path, String def) {
++        config.addDefault(path, def);
++        return config.getString(path, def);
++    }
++
++    public static String mavenCentralRepository;
++
++    private static void readMavenCentralRepository() {
++        mavenCentralRepository = getString("maven-central-repository", "https://repo.maven.apache.org/maven2");
++    }
++}
+diff --git a/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java b/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
+index aea18838a17fc52e1bf8cd84cd185565e6e2246d..63a40178ba13d086db2087d7a03712004e823d03 100644
+--- a/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
++++ b/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
+@@ -1,20 +1,16 @@
+ package net.minecraft.server.dedicated;
+ 
+-import com.google.common.collect.Lists;
+ import com.mojang.authlib.GameProfile;
+ import com.mojang.datafixers.DataFixer;
+ import com.mojang.logging.LogUtils;
+-import java.io.BufferedReader;
++
+ import java.io.BufferedWriter;
++import java.io.File;
+ import java.io.IOException;
+-import java.io.InputStreamReader;
+ import java.net.InetAddress;
+ import java.net.Proxy;
+-import java.nio.charset.StandardCharsets;
+ import java.nio.file.Files;
+ import java.nio.file.Path;
+-import java.util.Collections;
+-import java.util.List;
+ import java.util.Locale;
+ import java.util.Optional;
+ import java.util.function.BooleanSupplier;
+@@ -227,6 +223,14 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
+         io.papermc.paper.brigadier.PaperBrigadierProviderImpl.INSTANCE.getClass(); // init PaperBrigadierProvider
+         // Paper end
+ 
++        // TabooSpigot Start
++        try {
++            ink.ptms.taboospigot.config.TabooSpigotConfig.init((File) options.valueOf("taboospigot-settings"));
++        } catch (Exception e) {
++            DedicatedServer.LOGGER.error("Failed to load TabooSpigot config", e);
++            return false;
++        }
++
+         this.setPvpAllowed(dedicatedserverproperties.pvp);
+         this.setFlightAllowed(dedicatedserverproperties.allowFlight);
+         this.setMotd(dedicatedserverproperties.motd);
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index 0d1217eac9b68e0c3c4c6953293c5d4bfe97e71c..23f4259b0c49119abeb9fabda11d0eab7068dd44 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -13,6 +13,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
+ import com.mojang.brigadier.tree.CommandNode;
+ import com.mojang.brigadier.tree.LiteralCommandNode;
+ import com.mojang.serialization.Lifecycle;
++import ink.ptms.taboospigot.config.TabooSpigotConfig;
+ import io.netty.buffer.ByteBuf;
+ import io.netty.buffer.ByteBufOutputStream;
+ import io.netty.buffer.Unpooled;
+@@ -407,6 +408,7 @@ public final class CraftServer implements Server {
+     }
+ 
+     public void loadPlugins() {
++        this.pluginManager.registerMavenCentralRepository(TabooSpigotConfig.mavenCentralRepository);
+         this.pluginManager.registerInterface(JavaPluginLoader.class);
+ 
+         File pluginFolder = this.getPluginsFolder(); // Paper
+@@ -2716,6 +2718,12 @@ public final class CraftServer implements Server {
+             return CraftServer.this.console.paperConfigurations.createLegacyObject(CraftServer.this.console);
+         }
+ 
++        @Override
++        public YamlConfiguration getTabooSpigotConfig()
++        {
++            return ink.ptms.taboospigot.config.TabooSpigotConfig.config;
++        }
++
+         @Override
+         public void restart() {
+             org.spigotmc.RestartCommand.restart();
+diff --git a/src/main/java/org/bukkit/craftbukkit/Main.java b/src/main/java/org/bukkit/craftbukkit/Main.java
+index 1b9e91b20dd9a9375a0a2a6a4d7a0bcdce9e7b1a..e284e87082d56612e3415957e34d7ade4b554209 100644
+--- a/src/main/java/org/bukkit/craftbukkit/Main.java
++++ b/src/main/java/org/bukkit/craftbukkit/Main.java
+@@ -151,6 +151,12 @@ public class Main {
+                         .defaultsTo(new File("paper.yml"))
+                         .describedAs("Yml file");
+ 
++                acceptsAll(asList("taboospigot", "taboospigot-settings"), "File for TabooSpigot settings")
++                        .withRequiredArg()
++                        .ofType(File.class)
++                        .defaultsTo(new File("taboospigot.yml"))
++                        .describedAs("Yml file");
++
+                 acceptsAll(asList("add-plugin", "add-extra-plugin-jar"), "Specify paths to extra plugin jars to be loaded in addition to those in the plugins folder. This argument can be specified multiple times, once for each extra plugin jar path.")
+                         .withRequiredArg()
+                         .ofType(File.class)
