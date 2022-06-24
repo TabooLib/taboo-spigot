@@ -1,0 +1,50 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Kylepoops <62238380+Kylepoops@users.noreply.github.com>
+Date: Fri, 24 Jun 2022 08:48:30 +0800
+Subject: [PATCH] Inventory Event
+
+
+diff --git a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+index 630a762b71861bfe21c47a11d4fe05e1a3b7d339..033fba1a838e642b5727fb0ce6d96ce51b8c9f12 100644
+--- a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
++++ b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+@@ -10,6 +10,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
+ import com.mojang.brigadier.tree.ArgumentCommandNode;
+ import com.mojang.brigadier.tree.CommandNode;
+ import com.mojang.logging.LogUtils;
++import ink.ptms.taboospigot.event.inventory.InventoryPlaceItemEvent;
+ import io.netty.util.concurrent.Future;
+ import io.netty.util.concurrent.GenericFutureListener;
+ import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
+@@ -169,6 +170,7 @@ import net.minecraft.world.phys.shapes.BooleanOp;
+ import net.minecraft.world.phys.shapes.Shapes;
+ import net.minecraft.world.phys.shapes.VoxelShape;
+ import org.apache.commons.lang3.StringUtils;
++import org.bukkit.Bukkit;
+ import org.slf4j.Logger;
+ 
+ // CraftBukkit start
+@@ -3049,6 +3051,23 @@ public class ServerGamePacketListenerImpl implements ServerPlayerConnection, Ser
+                             return;
+                         }
+ 
++                        // TabooSpigot start - InventoryPlaceItemEvent
++                        if (event.getResult() != Event.Result.DENY) {
++                            switch (action) {
++                                case PLACE_ALL, PLACE_SOME, PLACE_ONE -> {
++                                    InventoryPlaceItemEvent placeEvent = new InventoryPlaceItemEvent(inventory, action, packet.getSlotNum(), this.player.containerMenu.getCarried().getBukkitStack());
++                                    event.setCancelled(cancelled);
++                                    this.cserver.getPluginManager().callEvent(placeEvent);
++                                    if (placeEvent.getResult() == Event.Result.DENY) {
++                                        this.player.connection.send(new ClientboundContainerSetSlotPacket(-1, -1, this.player.inventoryMenu.incrementStateId(), this.player.containerMenu.getCarried()));
++                                        this.player.connection.send(new ClientboundContainerSetSlotPacket(this.player.containerMenu.containerId, this.player.inventoryMenu.incrementStateId(), packet.getSlotNum(), this.player.containerMenu.getSlot(packet.getSlotNum()).getItem()));
++                                    }
++                                }
++                            }
++                        }
++                        // TabooSpigot end
++
++
+                         switch (event.getResult()) {
+                             case ALLOW:
+                             case DEFAULT:

@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Kylepoops <62238380+Kylepoops@users.noreply.github.com>
+Date: Fri, 24 Jun 2022 08:47:28 +0800
+Subject: [PATCH] TabooSpigot Events
+
+
+diff --git a/src/main/java/ink/ptms/taboospigot/event/inventory/InventoryPlaceItemEvent.java b/src/main/java/ink/ptms/taboospigot/event/inventory/InventoryPlaceItemEvent.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..e61b0bbbe3cdd36e859f2f2fc5c8075022471ffb
+--- /dev/null
++++ b/src/main/java/ink/ptms/taboospigot/event/inventory/InventoryPlaceItemEvent.java
+@@ -0,0 +1,50 @@
++package ink.ptms.taboospigot.event.inventory;
++
++import org.bukkit.event.HandlerList;
++import org.bukkit.event.inventory.InventoryAction;
++import org.bukkit.event.inventory.InventoryInteractEvent;
++import org.bukkit.inventory.InventoryView;
++import org.bukkit.inventory.ItemStack;
++import org.jetbrains.annotations.NotNull;
++
++public class InventoryPlaceItemEvent extends InventoryInteractEvent {
++    private static final HandlerList handlers = new HandlerList();
++
++    private final InventoryAction action;
++
++    private final int slot;
++    private final ItemStack placed;
++
++
++    public InventoryPlaceItemEvent(InventoryView view, InventoryAction action, int slot, ItemStack placed) {
++        super(view);
++        this.action = action;
++        this.slot = view.convertSlot(slot);
++        this.placed = placed;
++    }
++
++    @NotNull
++    @Override
++    public HandlerList getHandlers() {
++        return handlers;
++    }
++
++    @NotNull
++    public ItemStack getPlaced() {
++        return placed;
++    }
++
++    @NotNull
++    public InventoryAction getAction() {
++        return action;
++    }
++
++    public int getSlot() {
++        return slot;
++    }
++
++    @NotNull
++    public static HandlerList getHandlerList() {
++        return handlers;
++    }
++}
