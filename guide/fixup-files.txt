@@ -1,0 +1,10 @@
+
+# Commands
+
+git commit -a --fixup <hash>
+git rebase --autosquash -i base
+
+# Files
+
+ink/ptms/taboospigot/config/TabooSpigotConfig.java
+a10078c1e5e896405c1b2d26a43e131f32df7272
