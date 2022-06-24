@@ -1,0 +1,39 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Kylepoops <62238380+Kylepoops@users.noreply.github.com>
+Date: Fri, 24 Jun 2022 11:08:57 +0800
+Subject: [PATCH] custom maven central repo
+
+
+diff --git a/src/main/java/org/bukkit/plugin/java/LibraryLoader.java b/src/main/java/org/bukkit/plugin/java/LibraryLoader.java
+index 6d634b0ea813ccb19f1562a7d0e5a59cea4eab21..d402b0e01e1c321db9f7604e9b7346771c27bb7c 100644
+--- a/src/main/java/org/bukkit/plugin/java/LibraryLoader.java
++++ b/src/main/java/org/bukkit/plugin/java/LibraryLoader.java
+@@ -11,6 +11,7 @@ import java.util.List;
+ import java.util.logging.Level;
+ import java.util.logging.Logger;
+ import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
++import org.bukkit.Bukkit;
+ import org.bukkit.plugin.PluginDescriptionFile;
+ import org.eclipse.aether.DefaultRepositorySystemSession;
+ import org.eclipse.aether.RepositorySystem;
+@@ -67,7 +68,19 @@ class LibraryLoader
+         } );
+         session.setReadOnly();
+ 
+-        this.repositories = repository.newResolutionRepositories( session, Arrays.asList( new RemoteRepository.Builder( "central", "default", "https://repo.maven.apache.org/maven2" ).build() ) );
++        String url = ink.ptms.taboospigot.config.TabooSpigotConfig.mavenCentralRepository;
++        if (url == null)
++        {
++            Bukkit.getLogger().warning( "[TabooSpigot] Maven Central repository is not set!" );
++            Bukkit.getLogger().warning( "[TabooSpigot] Fallback to https://repo.maven.apache.org/maven2" );
++            url = "https://repo.maven.apache.org/maven2";
++        }
++        else
++        {
++            Bukkit.getLogger().info( "[TabooSpigot] Maven Central repository is set to " + url );
++        }
++
++        this.repositories = repository.newResolutionRepositories( session, Arrays.asList( new RemoteRepository.Builder( "central", "default", url ).build() ) );
+     }
+ 
+     @Nullable
