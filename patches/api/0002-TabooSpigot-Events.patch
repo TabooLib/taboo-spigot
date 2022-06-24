@@ -6,7 +6,7 @@ Subject: [PATCH] TabooSpigot Events
 
 diff --git a/src/main/java/ink/ptms/taboospigot/event/inventory/InventoryPlaceItemEvent.java b/src/main/java/ink/ptms/taboospigot/event/inventory/InventoryPlaceItemEvent.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..e61b0bbbe3cdd36e859f2f2fc5c8075022471ffb
+index 0000000000000000000000000000000000000000..b1f078405e9d9314f435be5f43d6268f946f6e26
 --- /dev/null
 +++ b/src/main/java/ink/ptms/taboospigot/event/inventory/InventoryPlaceItemEvent.java
 @@ -0,0 +1,50 @@
@@ -28,7 +28,7 @@ index 0000000000000000000000000000000000000000..e61b0bbbe3cdd36e859f2f2fc5c80750
 +    private final ItemStack placed;
 +
 +
-+    public InventoryPlaceItemEvent(InventoryView view, InventoryAction action, int slot, ItemStack placed) {
++    public InventoryPlaceItemEvent(@NotNull InventoryView view, @NotNull InventoryAction action, int slot, @NotNull ItemStack placed) {
 +        super(view);
 +        this.action = action;
 +        this.slot = view.convertSlot(slot);
