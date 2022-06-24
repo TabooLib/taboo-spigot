@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Kylepoops <62238380+Kylepoops@users.noreply.github.com>
+Date: Fri, 24 Jun 2022 16:12:54 +0800
+Subject: [PATCH] Fix API inconsistency
+
+
+diff --git a/src/main/java/net/minecraft/network/protocol/game/ClientboundSystemChatPacket.java b/src/main/java/net/minecraft/network/protocol/game/ClientboundSystemChatPacket.java
+index 365cf8486d690029a48b771a6186118a28eba7d4..f872444d588ef07bbbc8daa0d38d5c6e345e27bf 100644
+--- a/src/main/java/net/minecraft/network/protocol/game/ClientboundSystemChatPacket.java
++++ b/src/main/java/net/minecraft/network/protocol/game/ClientboundSystemChatPacket.java
+@@ -19,6 +19,11 @@ public record ClientboundSystemChatPacket(@javax.annotation.Nullable net.kyori.a
+         this(null, improveBungeeComponentSerialization(content), typeId); // Paper - Adventure & don't nest if we don't need to so that we can preserve formatting
+     }
+     // Spigot end
++    // TabooSpigot start
++    public ClientboundSystemChatPacket(@javax.annotation.Nullable String content, int typeId) {
++        this(null, content, typeId);
++    }
++    // TabooSpigot end
+     // Paper start
+     public ClientboundSystemChatPacket {
+         com.google.common.base.Preconditions.checkArgument(!(adventure$content == null && content == null), "Component adventure$content and String (json) content cannot both be null");
